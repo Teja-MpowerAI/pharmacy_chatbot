@@ -1,0 +1,49 @@
+# Render Blueprint for the 1Health Pharmacy chatbot BACKEND.
+# In Render: New -> Blueprint -> connect this repo. It reads this file.
+# Secret values (sync: false) are entered in the Render dashboard, never in git.
+#
+# IMPORTANT: keep this as a SINGLE instance / single uvicorn process. The push
+# notifications (admin confirm/reject, payment, order-status) use an in-process
+# bus, so multiple workers/instances would not share it.
+services:
+  - type: web
+    name: pharmacy-chatbot-backend
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    numInstances: 1
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.10"
+      # ---- non-secret ----
+      - key: SUPABASE_URL
+        value: https://mzajcuhbfufyhgafoyax.supabase.co
+      - key: OPENAI_INTENT_MODEL
+        value: gpt-4o-mini
+      - key: OPENAI_VISION_MODEL
+        value: gpt-4o
+      # ---- secrets: set these in the Render dashboard ----
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: SUPABASE_SERVICE_KEY
+        sync: false
+      # Comma-separated; set to your Vercel frontend URL after it's deployed,
+      # e.g. https://pharmacy-chatbot.vercel.app
+      - key: CORS_ORIGINS
+        sync: false
+      # Set to this service's own URL once known, e.g.
+      # https://pharmacy-chatbot-backend.onrender.com
+      - key: PUBLIC_BASE_URL
+        sync: false
+      # ---- optional (online payments / webhooks) ----
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      - key: RAZORPAY_WEBHOOK_SECRET
+        sync: false
+      - key: SUPABASE_WEBHOOK_SECRET
+        sync: false
