@@ -203,6 +203,14 @@ async def handle_place_order(state: PharmacyState) -> PharmacyState:
     # Any medicine can be ordered by typing (client decision). If the user
     # already gave a quantity ("order 10 augmentin"), use it; otherwise ask.
     qty = state.get("extracted_quantity")
+    # Guard: a number that's part of the medicine's name/strength (e.g. the
+    # "625" in "Augmentin 625mg") must NOT be treated as a unit count.
+    if qty:
+        name_digits = "".join(
+            c for c in f"{query} {m.get('name', '')}" if c.isdigit()
+        )
+        if str(int(qty)) in name_digits:
+            qty = None
     if qty and int(qty) > 0:
         return _process_quantity(state, m["name"], float(m.get("price") or 0), int(qty))
     return _ask_quantity(state, m["name"], float(m.get("price") or 0))

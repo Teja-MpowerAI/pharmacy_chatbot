@@ -88,6 +88,10 @@ Rules:
 - "cancel" => cancel_order.
 - extracted_quantity is a COUNT of tablets/units only. Never treat a rupee \
 amount as a quantity (e.g. "for 500 rupees" => null).
+- A medicine's STRENGTH / DOSAGE is NOT a quantity. "625mg", "500mg", "40mg", \
+"650" in "Dolo 650" are part of the medicine name — set extracted_quantity to \
+null for these. Only extract a quantity when the user clearly states a count, \
+e.g. "10 tablets", "2 strips", "qty 5", "5 units".
 - If unsure, use "unknown".
 """
 
