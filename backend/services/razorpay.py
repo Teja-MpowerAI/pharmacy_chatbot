@@ -18,7 +18,8 @@ logger = logging.getLogger(__name__)
 
 try:
     import razorpay  # type: ignore
-except ImportError:  # pragma: no cover
+except ImportError as _exc:  # pragma: no cover
+    logger.warning("razorpay SDK import failed (%s) — online payment disabled", _exc)
     razorpay = None
 
 _client = None
