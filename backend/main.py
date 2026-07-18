@@ -64,22 +64,6 @@ async def health():
     return {"status": "healthy"}
 
 
-@app.get("/debug/razorpay")
-async def debug_razorpay():
-    """Diagnostic (no secrets exposed): shows whether Razorpay is configured."""
-    from services.razorpay import _client
-
-    return {
-        "razorpay_enabled": settings.razorpay_enabled,
-        "key_id_set": bool(settings.RAZORPAY_KEY_ID),
-        "key_id_prefix": (settings.RAZORPAY_KEY_ID or "")[:8],
-        "key_secret_set": bool(settings.RAZORPAY_KEY_SECRET),
-        "key_secret_len": len(settings.RAZORPAY_KEY_SECRET or ""),
-        "webhook_secret_set": bool(settings.RAZORPAY_WEBHOOK_SECRET),
-        "client_initialized": _client is not None,
-    }
-
-
 if __name__ == "__main__":
     import uvicorn
 
