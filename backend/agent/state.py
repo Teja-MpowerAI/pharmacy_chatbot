@@ -18,6 +18,8 @@ from typing import Any, Dict, List, Literal, Optional, TypedDict
 # ---- Conversation steps (must match values stored in sessions.current_step) --
 Step = Literal[
     "idle",
+    # typed order: waiting for the quantity of the chosen medicine
+    "collecting_quantity",
     # legacy typed-order COD path
     "collecting_name",
     "collecting_phone",

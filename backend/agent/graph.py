@@ -35,6 +35,7 @@ NODES = {
     "browse_catalog": g.handle_browse_catalog,
     "search_medicine": g.handle_search_medicine,
     "place_order": g.handle_place_order,
+    "provide_quantity": g.handle_provide_quantity,
     "list_stores": g.handle_list_stores,
     "check_status": g.handle_check_status,
     "cancel_order": g.handle_cancel_order,

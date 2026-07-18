@@ -52,6 +52,7 @@ _NO = {"no", "n", "cancel", "nahi", "nope", "stop"}
 
 # current_step -> intent for the deterministic (non-idle) layer.
 STEP_INTENT: Dict[str, str] = {
+    "collecting_quantity": "provide_quantity",
     "collecting_name": "provide_name",
     "collecting_phone": "provide_phone",
     "collecting_address": "provide_address",
@@ -215,6 +216,8 @@ async def detect_intent(state: PharmacyState) -> PharmacyState:
         elif intent == "delivery_provide_pincode":
             state["extracted_pincode"] = _extract_pincode(text)
         elif intent == "pickup_select_store":
+            state["extracted_quantity"] = _extract_store_number(text)
+        elif intent == "provide_quantity":
             state["extracted_quantity"] = _extract_store_number(text)
         return state
 

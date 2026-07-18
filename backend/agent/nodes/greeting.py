@@ -11,8 +11,10 @@ any persistent fields (basket / current_step / order_type), and returns state.
 """
 from __future__ import annotations
 
-from typing import List
+import math
+from typing import Any, Dict, List
 
+from config import settings
 from agent.state import (
     FULFILMENT_REPLIES,
     MAIN_MENU_REPLIES,
@@ -151,26 +153,18 @@ async def handle_search_medicine(state: PharmacyState) -> PharmacyState:
 
     in_stock = (m.get("stock_quantity") or 0) > 0
     brand = f" ({m['brand']})" if m.get("brand") else ""
-    rx_note = (
-        "\n\n⚠️ This medicine requires a prescription. Please upload it to order."
-        if m.get("requires_prescription")
-        else ""
-    )
     state["reply_message"] = (
         f"{corrected_note}*{m['name']}*{brand}\n\n"
         f"Price: {_rupees(m.get('price'))}\n"
         f"Category: {m.get('category') or 'General'}\n"
         f"Stock: {'Available ✅' if in_stock else 'Out of stock ❌'}"
-        f"{rx_note}"
     )
-    if in_stock and not m.get("requires_prescription"):
+    if in_stock:
         state["quick_replies"] = [
             {"label": f"🛒 Order {m['name']}", "value": f"order {m['name']}"}
         ]
-    elif m.get("requires_prescription"):
-        state["quick_replies"] = [
-            {"label": "📄 Upload prescription", "value": "upload_prescription"}
-        ]
+    else:
+        state["quick_replies"] = MAIN_MENU_REPLIES
     return state
 
 
@@ -194,21 +188,9 @@ async def handle_place_order(state: PharmacyState) -> PharmacyState:
         state["quick_replies"] = MAIN_MENU_REPLIES
         return state
 
-    # Uncertain match -> confirm which medicine before adding to the basket.
+    # Uncertain match -> confirm which medicine before proceeding.
     if res["quality"] == "weak":
         return _did_you_mean(state, query, [m] + res["alternatives"])
-
-    # Business rule (answer #5): prescription-only medicines cannot be added by
-    # typing — the patient must upload a prescription first.
-    if m.get("requires_prescription"):
-        state["reply_message"] = (
-            f"*{m['name']}* requires a valid prescription. 📄\n\n"
-            "Please upload your prescription and I'll add it for you."
-        )
-        state["quick_replies"] = [
-            {"label": "📄 Upload prescription", "value": "upload_prescription"}
-        ]
-        return state
 
     if (m.get("stock_quantity") or 0) <= 0:
         state["reply_message"] = (
@@ -218,27 +200,89 @@ async def handle_place_order(state: PharmacyState) -> PharmacyState:
         state["quick_replies"] = MAIN_MENU_REPLIES
         return state
 
-    qty = state.get("extracted_quantity") or 1
-    if qty < 1:
-        qty = 1
+    # Any medicine can be ordered by typing (client decision). If the user
+    # already gave a quantity ("order 10 augmentin"), use it; otherwise ask.
+    qty = state.get("extracted_quantity")
+    if qty and int(qty) > 0:
+        return _process_quantity(state, m["name"], float(m.get("price") or 0), int(qty))
+    return _ask_quantity(state, m["name"], float(m.get("price") or 0))
 
-    item: BasketItem = {
-        "name": m["name"],
-        "quantity": int(qty),
-        "price": float(m.get("price") or 0),
-    }
-    # Single-item basket for a typed order (mirrors the Telegram bot).
-    state["basket"] = [item]
+
+def _ask_quantity(state: PharmacyState, name: str, price: float) -> PharmacyState:
+    """Stash the chosen medicine and ask how many units."""
+    state["basket"] = [{"name": name, "price": price, "quantity": 1}]
+    state["current_step"] = "collecting_quantity"
     state["order_type"] = None
     state["payment_method"] = None
-
-    line_total = item["price"] * item["quantity"]
+    state["response_type"] = "message"
     state["reply_message"] = (
-        f"Added *{m['name']}* × {qty} = {_rupees(line_total)} to your basket. 🛒\n\n"
+        f"*{name}* is {_rupees(price)} per unit. 💊\n\n"
+        "How many units would you like? (just send a number)"
+    )
+    return state
+
+
+def _process_quantity(
+    state: PharmacyState, name: str, price: float, qty: int
+) -> PharmacyState:
+    """Compute the total, enforce the minimum, then show fulfilment options."""
+    total = price * qty
+    min_order = settings.DELIVERY_MIN_ORDER
+    state["response_type"] = "message"
+
+    if total < min_order:
+        # Reject: keep them at the quantity step so they can send a bigger number.
+        need = math.ceil(min_order / price) if price > 0 else 0
+        state["basket"] = [{"name": name, "price": price, "quantity": qty}]
+        state["current_step"] = "collecting_quantity"
+        hint = (
+            f" You'd need at least *{need}* units ({_rupees(price * need)})."
+            if need
+            else ""
+        )
+        state["reply_message"] = (
+            f"*{name}* × {qty} = {_rupees(total)}.\n\n"
+            f"❌ Our minimum order is {_rupees(min_order)}, so this can't be placed."
+            f"{hint}\n\nHow many units would you like? (or type *cancel*)"
+        )
+        return state
+
+    # Accepted -> basket ready, offer pickup / delivery.
+    state["basket"] = [{"name": name, "price": price, "quantity": qty}]
+    state["current_step"] = "idle"
+    state["order_type"] = None
+    state["payment_method"] = None
+    state["reply_message"] = (
+        f"*{name}* × {qty} = *{_rupees(total)}* 🛒\n\n"
         "How would you like to receive it?"
     )
     state["quick_replies"] = FULFILMENT_REPLIES
     return state
+
+
+async def handle_provide_quantity(state: PharmacyState) -> PharmacyState:
+    """User sent a quantity while at the collecting_quantity step."""
+    basket = state.get("basket") or []
+    state["response_type"] = "message"
+    if not basket:
+        # Lost the pending item (e.g. session reset) — restart cleanly.
+        state["reply_message"] = "Which medicine would you like to order?"
+        state["current_step"] = "idle"
+        state["quick_replies"] = MAIN_MENU_REPLIES
+        return state
+
+    item = basket[0]
+    qty = state.get("extracted_quantity")
+    if not qty or int(qty) < 1:
+        state["reply_message"] = (
+            f"Please tell me how many units of *{item.get('name')}* you'd like "
+            "— just send a number like 5."
+        )
+        return state
+
+    return _process_quantity(
+        state, item.get("name", ""), float(item.get("price") or 0), int(qty)
+    )
 
 
 # --------------------------------------------------------------------------
