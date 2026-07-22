@@ -2,10 +2,9 @@
 Pickup flow.
 
 Steps: select_pickup -> pickup_collecting_name -> pickup_collecting_phone ->
-pickup_selecting_store -> order created.
+pickup_collecting_address -> pickup_selecting_store -> order created.
 
 Fixes vs the n8n bot:
-  * No stray address step (pickup is name -> phone -> stores, per spec).
   * Store selection reads the real `stores` table in a STABLE order (by id) and
     indexes into it, instead of a hardcoded 5-element JS array that could point
     the order at a different store than the patient saw.
@@ -151,7 +150,7 @@ async def handle_pickup_name(state: PharmacyState) -> PharmacyState:
 
 
 # --------------------------------------------------------------------------
-# pickup_collecting_phone -> show stores
+# pickup_collecting_phone -> ask for address
 # --------------------------------------------------------------------------
 async def handle_pickup_phone(state: PharmacyState) -> PharmacyState:
     phone = state.get("extracted_phone")
@@ -161,6 +160,20 @@ async def handle_pickup_phone(state: PharmacyState) -> PharmacyState:
         return state
 
     state["phone_number"] = phone
+    state["current_step"] = "pickup_collecting_address"
+    state["response_type"] = "message"
+    state["reply_message"] = (
+        "Got it! Now please send your *address* — street, area and city."
+    )
+    return state
+
+
+# --------------------------------------------------------------------------
+# pickup_collecting_address -> show stores
+# --------------------------------------------------------------------------
+async def handle_pickup_address(state: PharmacyState) -> PharmacyState:
+    address = (state.get("extracted_address") or state.get("input_text") or "").strip()
+    state["address"] = address
 
     stores = await db.get_stores()
     inventory = await db.get_store_inventory()
@@ -259,7 +272,10 @@ async def handle_pickup_select_store(state: PharmacyState) -> PharmacyState:
             "chat_id": state["chat_id"],
             "patient_name": state.get("patient_name"),
             "phone_number": state.get("phone_number"),
-            "address": f"{chosen['name']}, {chosen['address']}",
+            "address": (
+                f"Pickup: {chosen['name']}, {chosen['address']}"
+                + (f" | Customer: {state['address']}" if state.get("address") else "")
+            ),
             "items": items,
             "total_price": total,
             "status": "pending",

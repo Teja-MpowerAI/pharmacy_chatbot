@@ -49,6 +49,7 @@ NODES = {
     "select_pickup": pk.handle_select_pickup,
     "pickup_provide_name": pk.handle_pickup_name,
     "pickup_provide_phone": pk.handle_pickup_phone,
+    "pickup_provide_address": pk.handle_pickup_address,
     "pickup_select_store": pk.handle_pickup_select_store,
     # delivery
     "select_delivery": dl.handle_select_delivery,
