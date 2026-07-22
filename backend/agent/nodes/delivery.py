@@ -9,7 +9,7 @@ Business rules:
   * Pincode must appear in some store's `serviceable_pincodes` (comma-separated).
     Each pincode is TRIMMED before comparison (n8n forgot to, so
     "500081, 500084" never matched "500084").
-  * Minimum order value (default ₹1000) applies to PRESCRIPTION orders only,
+  * Minimum order value (default ₹100) applies to PRESCRIPTION orders only,
     detected via a price-less basket (`has_preset_prices` is False).
   * COD adds ₹40, Online adds ₹20 (the online charge is framed as a discount).
 Totals are recomputed here for display and again in the payment node at
