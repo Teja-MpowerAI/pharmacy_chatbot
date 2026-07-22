@@ -21,6 +21,16 @@ const PRODUCTS = [
   { emoji: "🟢", name: "Shelcal 500 Tablet", pack: "Strip of 15 tablets", price: 105, mrp: 120, off: 12 },
   { emoji: "💧", name: "ORS Orange Powder", pack: "Pack of 5", price: 95, mrp: 110, off: 14 },
   { emoji: "🩹", name: "Digene Antacid Gel", pack: "200 ml", price: 148, mrp: 165, off: 10 },
+  { emoji: "💊", name: "Combiflam Tablet", category: "Pain Relief", pack: "Strip of 20 tablets", price: 44, mrp: 49, off: 10 },
+  { emoji: "🧪", name: "Azithral 500 Tablet", category: "Antibiotics", pack: "Strip of 5 tablets", price: 78, mrp: 85, off: 8, rx: true },
+  { emoji: "💊", name: "Ciplox 500 Tablet", category: "Antibiotics", pack: "Strip of 10 tablets", price: 62, mrp: 72, off: 13, rx: true },
+  { emoji: "🟠", name: "Becosules Capsules", category: "Vitamins & Supplements", pack: "Strip of 20 capsules", price: 40, mrp: 45, off: 11 },
+  { emoji: "💊", name: "Neurobion Forte Tablet", category: "Vitamins & Supplements", pack: "Strip of 30 tablets", price: 42, mrp: 48, off: 12 },
+  { emoji: "🧴", name: "Benadryl Cough Syrup", category: "Cough & Cold", pack: "Bottle of 100 ml", price: 115, mrp: 130, off: 11 },
+  { emoji: "🧴", name: "Betnovate-N Cream", category: "Skin Care", pack: "Tube of 20 g", price: 40, mrp: 45, off: 11, rx: true },
+  { emoji: "💊", name: "Glycomet 500 Tablet", category: "Diabetes Care", pack: "Strip of 20 tablets", price: 32, mrp: 36, off: 11, rx: true },
+  { emoji: "🥤", name: "Ensure Nutrition Powder", category: "Nutrition", pack: "Jar of 400 g", price: 620, mrp: 720, off: 13 },
+  { emoji: "🩹", name: "Dettol Antiseptic Liquid", category: "First Aid", pack: "Bottle of 250 ml", price: 145, mrp: 160, off: 9 },
 ];
 
 function Rupee({ value }: { value: number }) {
